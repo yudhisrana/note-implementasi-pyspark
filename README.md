@@ -35,13 +35,55 @@ cd spark-job
 code .
 ```
 
-## 6. Jalankan Spark Job
+## 6. Buat file dengan nama retail_analysis.py
+```bash
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, count, sum, to_timestamp, hour
+spark = SparkSession.builder.appName("RetailAnalysis").getOrCreate()
+# Baca data dari HDFS
+df = spark.read.csv("hdfs://localhost:9000/user/hadoop/retail/input/online_retail.csv", header=True, inferSchema=True)
+# Tambahkan kolom TotalAmount
+df = df.withColumn("TotalAmount", col("Quantity") * col("UnitPrice"))
+# 1. Produk Terlaris
+top_products = df.groupBy("Description") \
+    .agg(count("Quantity").alias("TotalBeli")) \
+    .orderBy(col("TotalBeli").desc())
+top_products.write.mode("overwrite").csv("hdfs://localhost:9000/user/hadoop/retail/output/top_products", header=True)
+# 2. Pelanggan Paling Aktif
+top_customers = df.groupBy("CustomerID") \
+    .agg(count("InvoiceNo").alias("TotalTransaksi")) \
+    .orderBy(col("TotalTransaksi").desc())
+top_customers.write.mode("overwrite").csv("hdfs://localhost:9000/user/hadoop/retail/output/top_customers", header=True)
+
+# 3. Waktu Pembelian Tersibuk
+df = df.withColumn("Hour", hour(to_timestamp("InvoiceDate", "yyyy-MM-dd HH:mm:ss")))
+busy_hours = df.groupBy("Hour") \
+    .agg(count("InvoiceNo").alias("JumlahTransaksi")) \
+    .orderBy(col("JumlahTransaksi").desc())
+
+busy_hours.write.mode("overwrite").csv("hdfs://localhost:9000/user/hadoop/retail/output/busy_hours", header=True)
+
+# 4. Rata-rata Pembelian per Pelanggan
+avg_purchase = df.groupBy("CustomerID") \
+    .agg(sum("Quantity").alias("TotalItem")) \
+    .orderBy(col("TotalItem").desc())
+avg_purchase.write.mode("overwrite").csv("hdfs://localhost:9000/user/hadoop/retail/output/avg_purchase", header=True)
+# 5. Produk Paling Menghasilkan
+top_revenue = df.groupBy("Description") \
+    .agg(sum("TotalAmount").alias("TotalRevenue")) \
+    .orderBy(col("TotalRevenue").desc())
+top_revenue.write.mode("overwrite").csv("hdfs://localhost:9000/user/hadoop/retail/output/top_revenue", header=True)
+
+spark.stop()
+```
+
+## 7. Jalankan Spark Job
 
 ```bash
 spark-submit retail_analysis.py
 ```
 
-## 7. Verifikasi Output
+## 8. Verifikasi Output
 
 ```bash
 hdfs dfs -ls /user/hadoop/retail/output/
@@ -54,14 +96,14 @@ Output folder yang dihasilkan:
 - `top_products`
 - `top_revenue`
 
-## 8. Lihat Isi File Output
+## 9. Lihat Isi File Output
 
 ```bash
 hdfs dfs -ls /user/hadoop/retail/output/avg_purchase/
 hdfs dfs -cat /user/hadoop/retail/output/avg_purchase/part-00000-xxxx.csv
 ```
 
-## 9. Pindahkan ke Lokal
+## 10. Pindahkan ke Lokal
 
 ```bash
 hdfs dfs -get /user/hadoop/retail/output/nama_folder ./nama_folder
@@ -69,9 +111,9 @@ hdfs dfs -get /user/hadoop/retail/output/nama_folder ./nama_folder
 
 > Ganti `nama_folder` sesuai folder output di HDFS.
 
-## 10. Rename File agar Pendek dan Mudah Diakses
+## 11. Rename File agar Pendek dan Mudah Diakses
 
-## 11. Buka Folder di VSCode dan Buat Virtual Environment
+## 12. Buka Folder di VSCode dan Buat Virtual Environment
 
 ```bash
 python -m venv .venv
@@ -80,7 +122,7 @@ pip install pandas matplotlib seaborn
 pip list
 ```
 
-## 12. Buat dan Jalankan Visualisasi
+## 13. Buat dan Jalankan Visualisasi
 
 ### a. `visual_avg_purchase.py`
 
