@@ -117,7 +117,7 @@ hdfs dfs -get /user/hadoop/retail/output/nama_folder ./nama_folder
 
 ```bash
 python -m venv .venv
-.\.venv\Scriptsctivate
+.\.venv\Scripts\activate
 pip install pandas matplotlib seaborn
 pip list
 ```
